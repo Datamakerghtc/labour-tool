@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Datamaker — Labour Cost Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #0034D2;
+    --blue-med: #799AFF;
+    --blue-light: #E8EEFF;
+    --blue-pale: #F0F4FF;
+    --dark: #191919;
+    --mid: #444444;
+    --light: #888888;
+    --border: #D0DCFF;
+    --white: #FFFFFF;
+    --idle-bg: #FFF0E8;
+    --idle: #CC4400;
+    --green: #0A7A3C;
+    --green-bg: #E6F7EE;
+    --orange: #FF6B00;
+    --warn: #FFEECC;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans', sans-serif;
+    background: #F4F7FF;
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--blue);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,52,210,0.18);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 12px; }
+  .nav-logo svg { height: 20px; }
+  .nav-logo svg path { fill: #fff !important; }
+  .nav-logo svg path:nth-child(1) { fill: rgba(255,255,255,0.5) !important; }
+  .nav-logo svg path:nth-child(2) { fill: #fff !important; }
+  .nav-logo svg path:nth-child(3) { fill: rgba(255,255,255,0.7) !important; }
+  .nav-title {
+    font-family: 'Noto Sans', sans-serif;
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-left: 1px solid rgba(255,255,255,0.25);
+    padding-left: 12px;
+    margin-left: 4px;
+  }
+  .nav-date {
+    font-family: 'Noto Sans Mono', monospace;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, var(--blue) 0%, #1a50e8 60%, #4070ff 100%);
+    padding: 56px 32px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(121,154,255,0.15);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -60px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: clamp(26px, 4vw, 40px);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 10px;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  .hero p {
+    color: rgba(255,255,255,0.7);
+    font-size: 15px;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.6;
+    position: relative;
+  }
+
+  /* TABS */
+  .tabs-wrapper {
+    background: var(--blue);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 0 32px;
+    border-bottom: none;
+  }
+  .tab-btn {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.55);
+    padding: 14px 28px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .tab-btn:hover { color: rgba(255,255,255,0.85); }
+  .tab-btn.active {
+    color: #fff;
+    border-bottom-color: #fff;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* MAIN */
+  main { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* SECTION */
+  .section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* CARD */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,52,210,0.05);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--blue-pale);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-header h2 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+  .badge {
+    background: var(--blue);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Noto Sans Mono', monospace;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .card-body { padding: 24px; }
+
+  /* ASSUMPTION */
+  .assumption-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--warn);
+    border: 1px solid #ffd080;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .assumption-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--orange);
+    white-space: nowrap;
+  }
+  .assumption-row input {
+    width: 100px;
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 14px;
+    padding: 6px 10px;
+    border: 1px solid #ffd080;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--blue);
+    font-weight: 600;
+    text-align: center;
+  }
+  .assumption-row span {
+    font-size: 12px;
+    color: var(--orange);
+    opacity: 0.75;
+  }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media(max-width:768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* FIELD */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--light);
+  }
+  .field input, .field select {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Noto Sans Mono', monospace;
+    color: var(--blue);
+    background: var(--blue-pale);
+    transition: border 0.2s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--blue);
+    background: #fff;
+  }
+  .field input[readonly] {
+    background: var(--blue-light);
+    color: var(--dark);
+    font-weight: 600;
+    cursor: default;
+  }
+  .field input.green-output {
+    background: var(--green-bg);
+    color: var(--green);
+    font-weight: 700;
+  }
+  .field input.idle-output {
+    background: var(--idle-bg);
+    color: var(--idle);
+    font-weight: 700;
+  }
+
+  /* RESULTS PANEL */
+  .results-panel {
+    background: linear-gradient(135deg, var(--blue) 0%, #2855e8 100%);
+    border-radius: 12px;
+    padding: 24px;
+    color: #fff;
+    margin-top: 24px;
+  }
+  .results-panel h3 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .result-kpi {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .result-kpi .kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.65;
+    margin-bottom: 6px;
+  }
+  .result-kpi .kpi-value {
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .result-kpi .kpi-unit {
+    font-size: 10px;
+    opacity: 0.5;
+    margin-top: 2px;
+  }
+  .result-kpi.highlight { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.35); }
+  .result-kpi.warn { background: rgba(255,107,0,0.25); border-color: rgba(255,107,0,0.4); }
+
+  /* BTN */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #1a50e8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,52,210,0.3); }
+  .btn-secondary {
+    background: var(--blue-pale);
+    color: var(--blue);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--blue-light); }
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* TABLE */
+  .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--blue);
+    color: #fff;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  tbody tr:nth-child(odd) { background: var(--blue-pale); }
+  tbody tr:nth-child(even) { background: #fff; }
+  tbody tr:hover { background: var(--blue-light); }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 12px;
+    color: var(--dark);
+  }
+  tbody td:first-child { font-family: 'Noto Sans', sans-serif; font-weight: 600; }
+  td.blue-val { color: var(--blue); font-weight: 700; }
+  td.green-val { color: var(--green); font-weight: 700; }
+  td.idle-val { color: var(--idle); font-weight: 700; }
+  td.pct-val { color: var(--blue); font-weight: 700; }
+
+  /* SECTION DIVIDER */
+  .section-label {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue-med);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* FORMULA PILL */
+  .formula-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--blue-pale);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+    margin-bottom: 16px;
+  }
+
+  /* STEP LEGEND */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--mid); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* DAILY REPORT */
+  .kpi-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: var(--blue);
+  }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.idle::before { background: var(--idle); }
+  .kpi-card.pct::before { background: var(--blue-med); }
+  .kpi-card .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--light); margin-bottom: 8px; }
+  .kpi-card .kpi-value { font-family: 'Noto Sans Mono', monospace; font-size: 24px; font-weight: 700; color: var(--dark); }
+  .kpi-card .kpi-value.blue { color: var(--blue); }
+  .kpi-card .kpi-value.green { color: var(--green); }
+  .kpi-card .kpi-value.idle { color: var(--idle); }
+  .kpi-card .kpi-sub { font-size: 11px; color: var(--light); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <svg width="132" height="28" viewBox="0 0 132 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M23.4316 4.17505H4.56852C4.43096 4.17505 4.36218 4.17505 4.30964 4.20182C4.26343 4.22537 4.22586 4.26294 4.20231 4.30916C4.17554 4.3617 4.17554 4.43047 4.17554 4.56803V23.4311C4.17554 23.5686 4.17554 23.6374 4.20231 23.69C4.22586 23.7362 4.26343 23.7738 4.30964 23.7973C4.36218 23.8241 4.43096 23.8241 4.56852 23.8241H23.4316C23.5691 23.8241 23.6379 23.8241 23.6905 23.7973C23.7367 23.7738 23.7742 23.7362 23.7978 23.69C23.8246 23.6374 23.8246 23.5686 23.8246 23.4311V4.56803C23.8246 4.43047 23.8246 4.3617 23.7978 4.30916C23.7742 4.26294 23.7367 4.22537 23.6905 4.20182C23.6379 4.17505 23.5691 4.17505 23.4316 4.17505Z" fill="#799AFF"/><path d="M4.17542 8.35083C6.48144 8.35083 8.35083 6.48144 8.35083 4.17542C8.35083 1.8694 6.48144 0 4.17542 0C1.8694 0 0 1.8694 0 4.17542C0 6.48144 1.8694 8.35083 4.17542 8.35083Z" fill="#FFFFFF"/><path d="M23.8246 27.9999C26.1306 27.9999 28 26.1305 28 23.8245C28 21.5184 26.1306 19.649 23.8246 19.649C21.5186 19.649 19.6492 21.5184 19.6492 23.8245C19.6492 26.1305 21.5186 27.9999 23.8246 27.9999Z" fill="#FFFFFF"/><path fill-rule="evenodd" clip-rule="evenodd" d="M103.851 6.13226V21.8578H106.313V16.3645L110.365 21.8574H113.284L109.026 16.0857L113.173 10.3142H110.255L106.313 15.7996V6.13226H103.851ZM119.192 22.1192C116.23 22.1192 113.921 19.8323 113.921 16.1949V16.0425C113.921 12.5794 115.99 10.0964 118.843 10.0964C121.98 10.0964 123.635 12.6883 123.635 16.1731C123.635 16.3256 123.635 16.6741 123.613 17.0226H116.382C116.622 18.9611 117.798 20.0065 119.301 20.0065C120.411 20.0065 121.196 19.5491 121.958 18.7868L123.243 20.3115C122.197 21.4223 120.934 22.1192 119.192 22.1192ZM116.36 15.3237H121.217C121.108 13.4724 120.303 12.1655 118.843 12.1655C117.471 12.1655 116.534 13.3417 116.36 15.3237ZM125.887 21.8579V10.3142H128.348V12.5576C128.958 11.0765 130.069 10.0528 131.812 10.1399V12.8189H131.703C129.721 12.8189 128.348 14.1258 128.348 16.7394V21.8579H125.887ZM74.5836 21.8579V10.3142H77.0449V11.9913C77.7201 10.9676 78.6131 10.0964 80.1377 10.0964C81.5534 10.0964 82.5771 10.8151 83.1216 11.9477C83.9057 10.9023 84.9294 10.0964 86.4976 10.0964C88.6539 10.0964 90.0261 11.4903 90.0261 14.104V21.8579H87.5867V14.8446C87.5867 13.1892 86.8461 12.318 85.6264 12.318C84.4067 12.318 83.5355 13.211 83.5355 14.8663V21.8579H81.0743V14.8228C81.0743 13.1674 80.3555 12.318 79.1358 12.318C77.8943 12.318 77.0449 13.2981 77.0449 14.8663V21.8579H74.5836ZM56.1323 19.0482C56.1323 21.3134 57.4391 22.0321 59.1162 22.0321C59.9657 22.0321 60.5755 21.8579 61.1636 21.5312V19.5274C60.728 19.7234 60.2924 19.8323 59.835 19.8323C59.0509 19.8323 58.6153 19.462 58.6153 18.569V12.4269H61.1854V10.3142H58.6153V7.19956H56.1323V10.3142H54.8908V12.4269H56.1323V19.0482ZM35.9655 22.0757C33.635 22.0757 31.5005 20.159 31.5005 16.2385V15.9335C31.5005 12.0566 33.635 10.0964 35.9655 10.0964C37.6426 10.0964 38.6663 11.0547 39.3415 12.0784V6.13229H41.8245V21.8579H39.3415V20.0065C38.6445 21.1173 37.6208 22.0757 35.9655 22.0757ZM36.6407 19.8976C38.1436 19.8976 39.4068 18.4601 39.4068 16.1949V15.9771C39.4068 13.7119 38.1436 12.2744 36.6407 12.2744C35.1378 12.2744 33.9835 13.6466 33.9835 15.9771V16.1731C33.9835 18.4819 35.1596 19.8976 36.6407 19.8976ZM50.7132 15.1546V14.7124C50.7132 13.1442 49.7984 12.3601 48.2302 12.3601C47.1194 12.3601 46.2264 12.7085 45.4641 13.057L44.7453 11.0968C45.8561 10.5523 46.9887 10.182 48.5569 10.182C50.0598 10.182 51.1924 10.574 51.9547 11.3364C52.717 12.0987 53.1091 13.2313 53.1091 14.6906V21.8564H50.6914V20.4429C50.0162 21.4001 48.9899 22.0742 47.4882 22.0742L47.4889 22.0742C45.5723 22.0742 43.9387 20.8519 43.9387 18.718V18.5937C43.9387 16.2526 45.6376 15.1546 48.077 15.1546H50.7132ZM50.6906 16.8324H48.4296C47.9505 16.8324 47.5536 16.9049 47.2388 17.0499C46.924 17.1788 46.6982 17.3721 46.5613 17.6299C46.4245 17.8876 46.356 18.1857 46.356 18.524C46.356 18.8623 46.4245 19.1523 46.5613 19.394C46.6982 19.6356 46.8966 19.8209 47.1567 19.9498C47.4167 20.0787 47.7247 20.1431 48.0805 20.1431C48.4775 20.1431 48.8265 20.0626 49.1276 19.9015C49.4424 19.7243 49.7093 19.4826 49.9283 19.1765C50.1609 18.8543 50.3389 18.4998 50.462 18.1132C50.5688 17.778 50.6447 17.4247 50.6898 17.0532L50.6906 16.8324ZM69.5381 14.7124V15.1547H66.9019C64.4624 15.1547 62.7636 16.2527 62.7636 18.5938V18.7181C62.7636 20.8519 64.3971 22.0743 66.3138 22.0743L66.3131 22.0742C67.8147 22.0742 68.8411 21.4001 69.5163 20.443V21.8564H71.9339V14.6906C71.9339 13.2313 71.5419 12.0987 70.7796 11.3364C70.0172 10.5741 68.8846 10.182 67.3818 10.182C65.8136 10.182 64.681 10.5523 63.5702 11.0968L64.2889 13.0571C65.0513 12.7086 65.9443 12.3601 67.0551 12.3601C68.6233 12.3601 69.5381 13.1442 69.5381 14.7124ZM67.2544 16.8325H69.5154L69.5147 17.0533C69.4696 17.4248 69.3937 17.7781 69.2869 18.1132C69.1637 18.4999 68.9858 18.8543 68.7531 19.1765C68.5341 19.4826 68.2672 19.7243 67.9524 19.9015C67.6513 20.0626 67.3023 20.1432 66.9054 20.1432C66.5495 20.1432 66.2416 20.0787 65.9815 19.9499C65.7215 19.821 65.523 19.6357 65.3862 19.394C65.2493 19.1524 65.1809 18.8624 65.1809 18.5241C65.1809 18.1857 65.2493 17.8877 65.3862 17.6299C65.523 17.3722 65.7489 17.1788 66.0637 17.05C66.3785 16.905 66.7754 16.8325 67.2544 16.8325ZM98.8053 15.1546V14.7124C98.8053 13.1442 97.8905 12.3601 96.3223 12.3601C95.2115 12.3601 94.3185 12.7085 93.5562 13.057L92.8375 11.0968C93.9483 10.5523 95.0809 10.182 96.649 10.182C98.1519 10.182 99.2845 10.574 100.047 11.3364C100.809 12.0987 101.201 13.2313 101.201 14.6906V21.8564H98.7836V20.4429C98.1084 21.4 97.0822 22.0741 95.5807 22.0742C93.6642 22.0741 92.0308 20.8518 92.0308 18.718V18.5937C92.0308 16.2526 93.7297 15.1546 96.1691 15.1546H98.8053ZM95.5807 22.0742C95.5806 22.0742 95.5805 22.0742 95.5804 22.0742H95.5811C95.581 22.0742 95.5809 22.0742 95.5807 22.0742ZM98.7827 16.8324H96.5217C96.0426 16.8324 95.6457 16.9049 95.3309 17.0499C95.0161 17.1788 94.7903 17.3721 94.6534 17.6299C94.5166 17.8876 94.4481 18.1857 94.4481 18.524C94.4481 18.8623 94.5166 19.1523 94.6534 19.394C94.7903 19.6356 94.9888 19.8209 95.2488 19.9498C95.5089 20.0787 95.8168 20.1431 96.1727 20.1431C96.5696 20.1431 96.9186 20.0626 97.2197 19.9015C97.5345 19.7243 97.8014 19.4826 98.0204 19.1765C98.2531 18.8543 98.431 18.4998 98.5542 18.1132C98.6609 17.778 98.7369 17.4247 98.7819 17.0532L98.7827 16.8324Z" fill="#FFFFFF"/></svg>
+    <span class="nav-title">Labour Cost Calculator</span>
+  </div>
+  <span class="nav-date" id="navDate"></span>
+</nav>
+
+<div class="hero">
+  <h1>Project-Based Labour Cost Tool</h1>
+  <p>Calculate hourly costs, track project hours, measure utilisation rates, and monitor idle costs — updated daily.</p>
+</div>
+
+<div class="tabs-wrapper">
+  <button class="tab-btn active" onclick="showTab('part1')">Part 1 — Worker Master</button>
+  <button class="tab-btn" onclick="showTab('part2')">Part 2 — Project Hours</button>
+  <button class="tab-btn" onclick="showTab('part3')">Part 3 — Utilisation & Costs</button>
+  <button class="tab-btn" onclick="showTab('report')">Daily Report</button>
+</div>
+
+<main>
+
+<!-- ============ PART 1 ============ -->
+<div id="part1" class="section active">
+  <div class="card">
+    <div class="card-header">
+      <h2>Worker Master Data</h2>
+      <span class="badge">Part 1</span>
+    </div>
+    <div class="card-body">
+      <div class="assumption-row">
+        <label>Standard Monthly Working Hours:</label>
+        <input type="number" id="stdHours" value="160" min="1" onchange="recalcAll()"/>
+        <span>hrs/month — Used in all calculations across all tabs</span>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Blue field = Input</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--dark)"></div> Auto-calculated</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Key output (Total Hourly Cost)</div>
+      </div>
+
+      <div class="section-label">Enter Worker Details</div>
+      <div class="grid-4">
+        <div class="field">
+          <label>Employee Name</label>
+          <input type="text" id="w_name" placeholder="e.g. Kofi Mensah"/>
+        </div>
+        <div class="field">
+          <label>Department / Role</label>
+          <input type="text" id="w_dept" placeholder="e.g. Engineering"/>
+        </div>
+        <div class="field">
+          <label>Monthly Salary (GHS)</label>
+          <input type="number" id="w_salary" placeholder="5000" min="0" oninput="calcWorkerRow()"/>
+        </div>
+        <div class="field">
+          <label>Employer Contributions (GHS)</label>
+          <input type="number" id="w_contrib" placeholder="750" min="0" oninput="calcWorkerRow()"/>
+        </div>
+      </div>
+      <div class="formula-pill">⟨ Hourly Cost = Monthly Salary ÷ Std Monthly Hours ⟩ &nbsp;&nbsp; ⟨ Total Hourly Cost = (Salary + Contributions) ÷ Std Monthly Hours ⟩</div>
+      <div class="grid-4">
+        <div class="field">
+          <label>Total Monthly Cost (GHS)</label>
+          <input type="text" id="w_totalMonthly" readonly placeholder="—"/>
+        </div>
+        <div class="field">
+          <label>Std Monthly Hours</label>
+          <input type="text" id="w_stdHrsDisplay" readonly placeholder="—"/>
+        </div>
+        <div class="field">
+          <label>Hourly Cost (GHS/hr)</label>
+          <input type="text" id="w_hourlyCost" readonly placeholder="—"/>
+        </div>
+        <div class="field">
+          <label>Total Hourly Cost (GHS/hr)</label>
+          <input type="text" id="w_totalHourly" class="green-output" readonly placeholder="—"/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addWorker()">＋ Add Worker</button>
+        <button class="btn btn-secondary" onclick="clearWorkerForm()">Clear</button>
+      </div>
+
+      <div style="margin-top:28px;">
+        <div class="section-label">Worker Master Table</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th><th>Department</th><th>Monthly Salary</th>
+                <th>Contributions</th><th>Total Monthly</th><th>Std Hrs</th>
+                <th>Hourly Cost</th><th class="highlight">Total Hourly Cost</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="workerTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PART 2 ============ -->
+<div id="part2" class="section">
+  <div class="card">
+    <div class="card-header">
+      <h2>Project Hours Tracking</h2>
+      <span class="badge">Part 2</span>
+    </div>
+    <div class="card-body">
+      <div class="assumption-row">
+        <label>Standard Monthly Hours:</label>
+        <input type="number" id="stdHours2" value="160" min="1" onchange="syncStdHours(2)"/>
+        <span>hrs/month — Enter actual hours per employee per project from timesheets only</span>
+      </div>
+
+      <div class="section-label">Log Timesheet Entry</div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Employee</label>
+          <select id="ts_emp" onchange="prefillTsEmployee()">
+            <option value="">— Select Employee —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Project Code</label>
+          <input type="text" id="ts_projCode" placeholder="PRJ-001 or IDLE"/>
+        </div>
+        <div class="field">
+          <label>Project Name</label>
+          <input type="text" id="ts_projName" placeholder="e.g. Website Redesign"/>
+        </div>
+      </div>
+      <div class="grid-4">
+        <div class="field">
+          <label>Regular Project Hours</label>
+          <input type="number" id="ts_regHrs" placeholder="80" min="0" oninput="calcTs()"/>
+        </div>
+        <div class="field">
+          <label>Overtime / Extra Hours</label>
+          <input type="number" id="ts_otHrs" placeholder="0" min="0" oninput="calcTs()"/>
+        </div>
+        <div class="field">
+          <label>Total Project Hours</label>
+          <input type="text" id="ts_totalHrs" class="blue-val" readonly placeholder="—" style="background:var(--blue-light);color:var(--blue);font-weight:700;"/>
+        </div>
+        <div class="field">
+          <label>Idle / Non-Project Hours</label>
+          <input type="text" id="ts_idleHrs" readonly placeholder="—" class="idle-output"/>
+        </div>
+      </div>
+      <div class="formula-pill">⟨ Idle Hours = Std Monthly Hours − Total Project Hours ⟩ &nbsp;&nbsp; ⟨ Category: Project Code "IDLE" = Practice/Training ⟩</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addTimesheet()">＋ Add Entry</button>
+        <button class="btn btn-secondary" onclick="clearTsForm()">Clear</button>
+      </div>
+
+      <div style="margin-top:28px;">
+        <div class="section-label">Timesheet Log</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th><th>Project Code</th><th>Project Name</th>
+                <th>Regular Hrs</th><th>Overtime Hrs</th><th>Total Project Hrs</th>
+                <th>Idle Hrs</th><th>Category</th><th>Status</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="tsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PART 3 ============ -->
+<div id="part3" class="section">
+  <div class="card">
+    <div class="card-header">
+      <h2>Utilisation & Cost Metrics</h2>
+      <span class="badge">Part 3</span>
+    </div>
+    <div class="card-body">
+      <div class="formula-pill">⟨ Utilisation % = Project Input Hrs / Total Monthly Hrs ⟩ &nbsp;&nbsp; ⟨ Idle Cost = Idle Hrs × Total Hourly Cost ⟩ &nbsp;&nbsp; ⟨ Avg Labour Rate = Total Project Cost / Total Project Hrs ⟩</div>
+
+      <div class="section-label">Utilisation Metrics Table</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Project Hrs</th>
+              <th>Total Monthly Hrs</th>
+              <th>Utilisation Rate</th>
+              <th>Idle Hrs</th>
+              <th>Total Hourly Cost</th>
+              <th>Idle Cost (GHS)</th>
+              <th>Project Labour Cost</th>
+              <th>Avg Labour Rate</th>
+            </tr>
+          </thead>
+          <tbody id="utilisationTable"></tbody>
+          <tfoot id="utilisationFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DAILY REPORT ============ -->
+<div id="report" class="section">
+  <div class="card">
+    <div class="card-header">
+      <h2>Daily Labour Cost Report</h2>
+      <span class="badge">Live</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--mid);margin-bottom:20px;">Auto-calculated from all data entered in Parts 1–3. Update daily.</p>
+      <div class="kpi-card-grid" id="reportKpis"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// =========== STATE ===========
+let workers = [];   // {name, dept, salary, contrib}
+let timesheets = []; // {empName, projCode, projName, regHrs, otHrs}
+
+function getStdHours() { return parseFloat(document.getElementById('stdHours').value) || 160; }
+
+function fmt(n) { return isNaN(n) ? '—' : n.toLocaleString('en-GH', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtInt(n) { return isNaN(n) ? '—' : n.toLocaleString('en-GH', {maximumFractionDigits:1}); }
+function fmtPct(n) { return isNaN(n) ? '—' : (n*100).toFixed(1) + '%'; }
+
+// =========== TAB ===========
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  if(id === 'part3') buildUtilisation();
+  if(id === 'report') buildReport();
+}
+
+// =========== DATE ===========
+document.getElementById('navDate').textContent = new Date().toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+
+// =========== PART 1 ===========
+function calcWorkerRow() {
+  const salary = parseFloat(document.getElementById('w_salary').value) || 0;
+  const contrib = parseFloat(document.getElementById('w_contrib').value) || 0;
+  const hrs = getStdHours();
+  const totalMonthly = salary + contrib;
+  const hourlyCost = hrs > 0 ? salary / hrs : 0;
+  const totalHourly = hrs > 0 ? totalMonthly / hrs : 0;
+
+  document.getElementById('w_totalMonthly').value = fmt(totalMonthly);
+  document.getElementById('w_stdHrsDisplay').value = hrs;
+  document.getElementById('w_hourlyCost').value = fmt(hourlyCost);
+  document.getElementById('w_totalHourly').value = fmt(totalHourly);
+}
+
+function addWorker() {
+  const name = document.getElementById('w_name').value.trim();
+  const dept = document.getElementById('w_dept').value.trim();
+  const salary = parseFloat(document.getElementById('w_salary').value);
+  const contrib = parseFloat(document.getElementById('w_contrib').value) || 0;
+  if (!name || isNaN(salary)) { alert('Please enter employee name and monthly salary.'); return; }
+  workers.push({name, dept, salary, contrib});
+  renderWorkerTable();
+  updateTsEmpDropdown();
+  clearWorkerForm();
+}
+
+function removeWorker(i) {
+  workers.splice(i, 1);
+  renderWorkerTable();
+  updateTsEmpDropdown();
+}
+
+function renderWorkerTable() {
+  const hrs = getStdHours();
+  const tbody = document.getElementById('workerTable');
+  if (workers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--light);padding:20px;">No workers added yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = workers.map((w, i) => {
+    const total = w.salary + w.contrib;
+    const hc = hrs > 0 ? w.salary / hrs : 0;
+    const thc = hrs > 0 ? total / hrs : 0;
+    return `<tr>
+      <td>${w.name}</td>
+      <td>${w.dept || '—'}</td>
+      <td class="blue-val">GHS ${fmt(w.salary)}</td>
+      <td>GHS ${fmt(w.contrib)}</td>
+      <td>GHS ${fmt(total)}</td>
+      <td>${hrs}</td>
+      <td class="blue-val">GHS ${fmt(hc)}</td>
+      <td class="green-val">GHS ${fmt(thc)}</td>
+      <td><button onclick="removeWorker(${i})" style="background:none;border:none;color:var(--idle);cursor:pointer;font-size:13px;">✕ Remove</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function clearWorkerForm() {
+  ['w_name','w_dept','w_salary','w_contrib','w_totalMonthly','w_stdHrsDisplay','w_hourlyCost','w_totalHourly'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function recalcAll() {
+  const h = document.getElementById('stdHours').value;
+  document.getElementById('stdHours2').value = h;
+  calcWorkerRow();
+  renderWorkerTable();
+  renderTsTable();
+}
+
+// =========== PART 2 ===========
+function syncStdHours(from) {
+  const val = document.getElementById('stdHours2').value;
+  document.getElementById('stdHours').value = val;
+  recalcAll();
+}
+
+function updateTsEmpDropdown() {
+  const sel = document.getElementById('ts_emp');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select Employee —</option>' +
+    workers.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
+  sel.value = cur;
+}
+
+function prefillTsEmployee() {}
+
+function calcTs() {
+  const reg = parseFloat(document.getElementById('ts_regHrs').value) || 0;
+  const ot = parseFloat(document.getElementById('ts_otHrs').value) || 0;
+  const hrs = getStdHours();
+  const total = reg + ot;
+  const idle = Math.max(hrs - total, 0);
+  document.getElementById('ts_totalHrs').value = fmtInt(total);
+  document.getElementById('ts_idleHrs').value = fmtInt(idle);
+}
+
+function addTimesheet() {
+  const empName = document.getElementById('ts_emp').value;
+  const projCode = document.getElementById('ts_projCode').value.trim();
+  const projName = document.getElementById('ts_projName').value.trim();
+  const regHrs = parseFloat(document.getElementById('ts_regHrs').value) || 0;
+  const otHrs = parseFloat(document.getElementById('ts_otHrs').value) || 0;
+  if (!empName) { alert('Please select an employee.'); return; }
+  if (!projCode) { alert('Please enter a project code (use "IDLE" for non-project time).'); return; }
+  timesheets.push({empName, projCode, projName, regHrs, otHrs});
+  renderTsTable();
+  clearTsForm();
+}
+
+function removeTs(i) { timesheets.splice(i, 1); renderTsTable(); }
+
+function renderTsTable() {
+  const hrs = getStdHours();
+  const tbody = document.getElementById('tsTable');
+  if (timesheets.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--light);padding:20px;">No timesheet entries yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = timesheets.map((t, i) => {
+    const total = t.regHrs + t.otHrs;
+    const isIdle = t.projCode.toUpperCase() === 'IDLE';
+    const idle = isIdle ? hrs : Math.max(hrs - total, 0);
+    const ok = total <= hrs;
+    const cat = isIdle ? 'Idle/Practice' : 'Project';
+    return `<tr>
+      <td>${t.empName}</td>
+      <td>${t.projCode}</td>
+      <td>${t.projName || '—'}</td>
+      <td>${fmtInt(t.regHrs)}</td>
+      <td>${fmtInt(t.otHrs)}</td>
+      <td class="blue-val">${fmtInt(total)}</td>
+      <td class="idle-val">${fmtInt(idle)}</td>
+      <td>${cat}</td>
+      <td style="color:${ok?'var(--green)':'var(--idle)'}; font-weight:700;">${ok?'✓ OK':'⚠ Over'}</td>
+      <td><button onclick="removeTs(${i})" style="background:none;border:none;color:var(--idle);cursor:pointer;font-size:13px;">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function clearTsForm() {
+  document.getElementById('ts_emp').value = '';
+  document.getElementById('ts_projCode').value = '';
+  document.getElementById('ts_projName').value = '';
+  document.getElementById('ts_regHrs').value = '';
+  document.getElementById('ts_otHrs').value = '';
+  document.getElementById('ts_totalHrs').value = '';
+  document.getElementById('ts_idleHrs').value = '';
+}
+
+// =========== PART 3 ===========
+function buildUtilisation() {
+  const hrs = getStdHours();
+  // Group timesheet by employee (sum project hours, excluding IDLE rows)
+  const empHours = {};
+  timesheets.forEach(t => {
+    if (!empHours[t.empName]) empHours[t.empName] = 0;
+    if (t.projCode.toUpperCase() !== 'IDLE') empHours[t.empName] += t.regHrs + t.otHrs;
+  });
+
+  const tbody = document.getElementById('utilisationTable');
+  const tfoot = document.getElementById('utilisationFoot');
+
+  if (workers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--light);padding:20px;">Add workers in Part 1 first</td></tr>';
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  let totalProjHrs = 0, totalIdleHrs = 0, totalIdleCost = 0, totalProjCost = 0;
+
+  tbody.innerHTML = workers.map(w => {
+    const totalMonthly = w.salary + w.contrib;
+    const thc = hrs > 0 ? totalMonthly / hrs : 0;
+    const projHrs = empHours[w.name] || 0;
+    const idleHrs = Math.max(hrs - projHrs, 0);
+    const util = hrs > 0 ? projHrs / hrs : 0;
+    const idleCost = idleHrs * thc;
+    const projCost = projHrs * thc;
+    const avgRate = projHrs > 0 ? projCost / projHrs : 0;
+
+    totalProjHrs += projHrs;
+    totalIdleHrs += idleHrs;
+    totalIdleCost += idleCost;
+    totalProjCost += projCost;
+
+    return `<tr>
+      <td>${w.name}</td>
+      <td class="blue-val">${fmtInt(projHrs)}</td>
+      <td>${hrs}</td>
+      <td class="pct-val">${fmtPct(util)}</td>
+      <td class="idle-val">${fmtInt(idleHrs)}</td>
+      <td>GHS ${fmt(thc)}</td>
+      <td class="idle-val">GHS ${fmt(idleCost)}</td>
+      <td class="green-val">GHS ${fmt(projCost)}</td>
+      <td>GHS ${fmt(projHrs > 0 ? projCost / projHrs : 0)}</td>
+    </tr>`;
+  }).join('');
+
+  const avgLabourRate = totalProjHrs > 0 ? totalProjCost / totalProjHrs : 0;
+  const totalUtil = workers.length > 0 && hrs > 0 ? totalProjHrs / (workers.length * hrs) : 0;
+
+  tfoot.innerHTML = `<tr style="background:var(--blue);color:#fff;font-weight:700;">
+    <td style="font-family:'Noto Sans',sans-serif;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:#fff;">TOTALS</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">${fmtInt(totalProjHrs)}</td>
+    <td style="color:#fff;">${workers.length * hrs}</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">${fmtPct(totalUtil)}</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">${fmtInt(totalIdleHrs)}</td>
+    <td style="color:#fff;">—</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">GHS ${fmt(totalIdleCost)}</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">GHS ${fmt(totalProjCost)}</td>
+    <td style="font-family:'Noto Sans Mono',monospace;color:#fff;">GHS ${fmt(avgLabourRate)}</td>
+  </tr>`;
+}
+
+// =========== DAILY REPORT ===========
+function buildReport() {
+  const hrs = getStdHours();
+  const empHours = {};
+  timesheets.forEach(t => {
+    if (!empHours[t.empName]) empHours[t.empName] = 0;
+    if (t.projCode.toUpperCase() !== 'IDLE') empHours[t.empName] += t.regHrs + t.otHrs;
+  });
+
+  let totalSalary = 0, totalContrib = 0, totalAvgHourlyCost = 0;
+  let totalProjHrs = 0, totalIdleHrs = 0, totalIdleCost = 0, totalProjCost = 0;
+
+  workers.forEach(w => {
+    totalSalary += w.salary;
+    totalContrib += w.contrib;
+    const totalMonthly = w.salary + w.contrib;
+    const thc = hrs > 0 ? totalMonthly / hrs : 0;
+    totalAvgHourlyCost += thc;
+    const projHrs = empHours[w.name] || 0;
+    const idleHrs = Math.max(hrs - projHrs, 0);
+    totalProjHrs += projHrs;
+    totalIdleHrs += idleHrs;
+    totalIdleCost += idleHrs * thc;
+    totalProjCost += projHrs * thc;
+  });
+
+  const avgHourlyCost = workers.length > 0 ? totalAvgHourlyCost / workers.length : 0;
+  const overallUtil = workers.length > 0 && hrs > 0 ? totalProjHrs / (workers.length * hrs) : 0;
+  const avgLabourRate = totalProjHrs > 0 ? totalProjCost / totalProjHrs : 0;
+
+  const kpis = [
+    { label: 'Active Employees', val: workers.length, unit: 'workers', cls: '' },
+    { label: 'Total Salary Cost', val: 'GHS ' + fmt(totalSalary), unit: 'monthly', cls: '' },
+    { label: 'Total Contributions', val: 'GHS ' + fmt(totalContrib), unit: 'monthly', cls: '' },
+    { label: 'Avg Total Hourly Cost', val: 'GHS ' + fmt(avgHourlyCost), unit: 'per hour', cls: '' },
+    { label: 'Total Project Hours', val: fmtInt(totalProjHrs) + ' hrs', unit: 'this month', cls: 'green' },
+    { label: 'Total Idle Hours', val: fmtInt(totalIdleHrs) + ' hrs', unit: 'this month', cls: 'idle' },
+    { label: 'Overall Utilisation', val: fmtPct(overallUtil), unit: 'target: 80%', cls: 'pct', highlight: overallUtil < 0.8 },
+    { label: 'Total Idle Cost', val: 'GHS ' + fmt(totalIdleCost), unit: 'wasted capacity', cls: 'idle' },
+    { label: 'Total Project Labour Cost', val: 'GHS ' + fmt(totalProjCost), unit: 'this month', cls: 'green' },
+    { label: 'Avg Project Labour Rate', val: 'GHS ' + fmt(avgLabourRate), unit: 'per hour', cls: '' },
+  ];
+
+  document.getElementById('reportKpis').innerHTML = kpis.map(k => `
+    <div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.cls}" style="${k.highlight ? 'color:var(--idle)' : ''}">${k.val}</div>
+      <div class="kpi-sub">${k.unit}</div>
+    </div>
+  `).join('');
+}
+
+// =========== INIT ===========
+renderWorkerTable();
+renderTsTable();
+</script>
+</body>
+</html>
